@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="ko"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>연월</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="연월">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="apple-touch-icon" href="icon.png">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;1,400&family=Noto+Serif+KR:wght@300;500;700&display=swap" rel="stylesheet">
+<style>
+/* ── 설정 ─────────────────────────────────────────────
+   구글 시트 "웹에 게시"(CSV) 링크를 아래 SHEET 에 넣는다.
+   (주소 뒤 ?sheet=링크 로 넣어도 된다)                    */
+</style>
+<script>
+const SHEET = '';            // 예: https://docs.google.com/spreadsheets/d/e/XXXX/pub?output=csv
+const REFRESH_SEC = 90;      // 시트를 다시 읽는 간격(초)
+const DEFAULT_FOOT = '입실 17:00 · 퇴실 13:00 · 불멍 1시간';
+const DEFAULT_MSG = '오늘 연월은 오직 {name}님을 위해<br>비워 두었어요. 본채도, 별채도, 마당도<br>모두 편히 누리시며 천천히 쉬어 가세요.';
+const EMPTY_MSG = '경주 불국사 곁, 하루 한 팀만 머무는 한옥이에요.<br>본채도, 별채도, 마당도<br>모두 편히 누리시며 천천히 쉬어 가세요.';
+</script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+body{background:var(--page);transition:background .6s}
+body.a{--page:#1d1712}
+body.b{--page:#f4ede3}
+#stage{position:absolute;left:50%;top:50%;width:2360px;height:1640px;transform-origin:center center;overflow:hidden}
+.v{position:absolute;inset:0;display:none}
+body.a .va,body.b .vb{display:block}
+/* 공통 글씨 */
+.welcome{font-family:'Cormorant Garamond',serif;font-style:italic;line-height:1}
+.name{font-family:'Noto Serif KR',serif;font-weight:700;letter-spacing:6px;word-break:keep-all}
+.name small{font-weight:300;margin-left:16px}
+.msg{font-family:'Noto Serif KR',serif;font-weight:300;letter-spacing:1px;word-break:keep-all}
+.serif{font-family:'Noto Serif KR',serif;font-weight:300;letter-spacing:3px}
+/* A: 사진 가득 */
+.va{background:#1d1712}
+.va .bg{position:absolute;inset:0;background:url(photo-yard.jpg) center 62%/cover}
+.va .shade{position:absolute;inset:0;background:linear-gradient(90deg,rgba(24,18,13,.86) 0%,rgba(24,18,13,.62) 38%,rgba(24,18,13,.08) 70%,rgba(24,18,13,0) 100%),linear-gradient(0deg,rgba(24,18,13,.75) 0%,rgba(24,18,13,0) 28%)}
+.va .foot{text-shadow:0 2px 12px rgba(0,0,0,.5)}
+.va .box{position:absolute;left:190px;top:0;bottom:0;width:1300px;display:flex;flex-direction:column;justify-content:center;color:#f6efe6}
+.va .welcome{font-size:120px;color:#e9cfa6}
+.va .name{font-size:150px;margin-top:40px}
+.va .name small{font-size:90px}
+.va .rule{width:120px;height:2px;background:#e9cfa6;margin:80px 0 70px}
+.va .msg{font-size:48px;line-height:1.9}
+.va .foot{position:absolute;left:190px;right:190px;bottom:120px;display:flex;justify-content:space-between;align-items:flex-end;color:#e9dccb;font-size:36px}
+.va .brand{font-family:'Cormorant Garamond',serif;font-weight:500;font-size:44px;letter-spacing:12px;color:#f6efe6}
+.va .brand span{display:block;font-family:'Noto Serif KR',serif;font-weight:300;font-size:30px;letter-spacing:8px;color:#d9c9b4;margin-top:10px}
+.va .info{text-align:right;line-height:1.8}
+/* B: 크림 + 아치 */
+.vb{background:#f4ede3;color:#3a2f26}
+.vb .frame{position:absolute;inset:60px;border:2px solid #d8c8b2}
+.vb .arch{position:absolute;right:220px;top:200px;width:820px;height:1240px;border-radius:410px 410px 0 0;background:url(photo-yard.jpg) center 60%/cover}
+.vb .box{position:absolute;left:240px;top:0;bottom:0;width:1000px;display:flex;flex-direction:column;justify-content:center}
+.vb .top{font-family:'Cormorant Garamond',serif;font-weight:500;font-size:40px;letter-spacing:14px;color:#9a6a43}
+.vb .welcome{font-size:150px;color:#9a6a43;margin-top:110px}
+.vb .name{font-size:140px;margin-top:30px}
+.vb .name small{font-size:84px}
+.vb .rule{width:100px;height:2px;background:#9a6a43;margin:70px 0 60px}
+.vb .msg{font-size:46px;line-height:1.95}
+.vb .info{margin-top:110px;font-size:34px;color:#7a6a58;line-height:1.8}
+.vb .info .date{font-weight:500;color:#3a2f26}
+/* 이름 없을 때 */
+.noname .name small{display:none}
+/* 이름이 길면 글씨를 줄인다 */
+.long .name{font-size:110px!important}
+.long .name small{font-size:70px!important}
+</style>
+</head>
+<body class="b">
+<div id="stage">
+ <section class="v va">
+  <div class="bg"></div><div class="shade"></div>
+  <div class="box">
+   <div class="welcome">Welcome,</div>
+   <div class="name"><span class="n"></span><small>님</small></div>
+   <div class="rule"></div>
+   <div class="msg"></div>
+  </div>
+  <div class="foot serif">
+   <div class="brand">RE:STAY YEONWOL<span>경주감성한옥 리스테이 연월</span></div>
+   <div class="info"><div class="date"></div><div class="f"></div></div>
+  </div>
+ </section>
+ <section class="v vb">
+  <div class="frame"></div><div class="arch"></div>
+  <div class="box">
+   <div class="top">RE:STAY YEONWOL</div>
+   <div class="welcome">Welcome,</div>
+   <div class="name"><span class="n"></span><small>님</small></div>
+   <div class="rule"></div>
+   <div class="msg"></div>
+   <div class="info serif"><div class="date"></div><div class="f"></div></div>
+  </div>
+ </section>
+</div>
+<script>
+// 화면 크기에 맞게 2360×1640 무대를 늘리고 줄인다
+function fit(){const s=Math.min(innerWidth/2360,innerHeight/1640);document.getElementById('stage').style.transform=`translate(-50%,-50%) scale(${s})`}
+addEventListener('resize',fit);fit();
+
+// CSV 한 줄씩 읽기 (따옴표 안 쉼표·줄바꿈 처리)
+function parseCSV(t){const rows=[];let r=[],c='',q=false;for(let i=0;i<t.length;i++){const ch=t[i];
+ if(q){if(ch=='"'){if(t[i+1]=='"'){c+='"';i++}else q=false}else c+=ch}
+ else if(ch=='"')q=true;else if(ch==','){r.push(c);c=''}else if(ch=='\n'||ch=='\r'){if(ch=='\r'&&t[i+1]=='\n')i++;r.push(c);rows.push(r);r=[];c=''}else c+=ch}
+ if(c!==''||r.length){r.push(c);rows.push(r)}return rows}
+
+// 첫 줄 = 제목(이름, 날짜, 디자인, 문구, 아래줄), 둘째 줄 = 내용
+function toData(rows){if(rows.length<2)return {};const h=rows[0].map(x=>x.trim()),v=rows[1];const o={};h.forEach((k,i)=>o[k]=(v[i]||'').trim());return o}
+
+const esc=s=>s.replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
+function show(d){
+ const name=(d['이름']||'').trim();
+ const design=((d['디자인']||'').trim().toUpperCase()==='A')?'a':'b';
+ document.body.className=design+(name?'':' noname')+(name.length>5?' long':'');
+ document.querySelectorAll('.n').forEach(e=>e.textContent=name||'리스테이 연월');
+ document.querySelectorAll('.welcome').forEach(e=>e.textContent=name?'Welcome,':'Welcome to');
+ const custom=(d['문구']||'').trim();
+ const msg=name?(custom?esc(custom).replace(/\n|\\n|\//g,'<br>'):DEFAULT_MSG).replaceAll('{name}',esc(name)):EMPTY_MSG;
+ document.querySelectorAll('.msg').forEach(e=>e.innerHTML=msg);
+ document.querySelectorAll('.date').forEach(e=>{e.textContent=d['날짜']||'';e.style.display=d['날짜']?'':'none'});
+ document.querySelectorAll('.f').forEach(e=>e.textContent=d['아래줄']||DEFAULT_FOOT);
+}
+
+const q=new URLSearchParams(location.search);
+const sheet=q.get('sheet')||SHEET;
+const KEY='yeonwol-welcome-last';
+function cached(){try{return JSON.parse(localStorage.getItem(KEY)||'null')}catch(e){return null}}
+function save(d){try{localStorage.setItem(KEY,JSON.stringify(d))}catch(e){}}
+
+async function load(){
+ if(!sheet){ // 시트가 없을 때: 주소 뒤 ?name=&date=&design= 으로 시험
+  show({'이름':q.get('name')||'','날짜':q.get('date')||'','디자인':q.get('design')||'B'});return}
+ try{
+  const u=sheet+(sheet.includes('?')?'&':'?')+'t='+Date.now();
+  const r=await fetch(u,{cache:'no-store'});if(!r.ok)throw new Error(r.status);
+  const d=toData(parseCSV(await r.text()));show(d);save(d);
+ }catch(e){const c=cached();if(c)show(c);else show({})}  // 못 읽으면 마지막 내용 유지
+}
+const c0=cached();show(c0||{});load();
+setInterval(load,REFRESH_SEC*1000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)load()});  // 멜론 갔다 돌아오면 바로 새로 읽기
+
+// 화면 꺼짐 방지 (지원하는 iPad만, 자동 잠금 '안 함'도 함께 설정)
+async function wake(){try{await navigator.wakeLock?.request('screen')}catch(e){}}
+wake();document.addEventListener('visibilitychange',()=>{if(!document.hidden)wake()});
+</script>
+</body></html>
