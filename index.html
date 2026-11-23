@@ -145,6 +145,14 @@ const c0=cached();show(c0||{});load();
 setInterval(load,REFRESH_SEC*1000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)load()});  // 멜론 갔다 돌아오면 바로 새로 읽기
 
+// Safari로 열렸을 때(단축어 자동화): 화면을 한 번 누르면 전체 화면
+const standalone=navigator.standalone||matchMedia('(display-mode: standalone)').matches;
+if(!standalone){document.addEventListener('click',()=>{
+ const el=document.documentElement;
+ if(document.fullscreenElement||document.webkitFullscreenElement)return;
+ try{(el.requestFullscreen||el.webkitRequestFullscreen||function(){}).call(el)}catch(e){}
+})}
+
 // 화면 꺼짐 방지 (지원하는 iPad만, 자동 잠금 '안 함'도 함께 설정)
 async function wake(){try{await navigator.wakeLock?.request('screen')}catch(e){}}
 wake();document.addEventListener('visibilitychange',()=>{if(!document.hidden)wake()});
