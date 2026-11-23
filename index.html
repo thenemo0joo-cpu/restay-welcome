@@ -15,7 +15,7 @@
    (주소 뒤 ?sheet=링크 로 넣어도 된다)                    */
 </style>
 <script>
-const SHEET = '';            // 예: https://docs.google.com/spreadsheets/d/e/XXXX/pub?output=csv
+const SHEET = 'https://docs.google.com/spreadsheets/d/1nz7qPaIHQy0-vTx1xkdG2lk6y1dfmxPdySGfJvz3AjY/gviz/tq?tqx=out:csv&headers=1';            // 예: https://docs.google.com/spreadsheets/d/e/XXXX/pub?output=csv
 const REFRESH_SEC = 90;      // 시트를 다시 읽는 간격(초)
 const DEFAULT_FOOT = '입실 17:00 · 퇴실 13:00 · 불멍 1시간';
 const DEFAULT_MSG = '오늘 연월은 오직 {name}님을 위해<br>비워 두었어요. 본채도, 별채도, 마당도<br>모두 편히 누리시며 천천히 쉬어 가세요.';
@@ -114,7 +114,8 @@ function toData(rows){if(rows.length<2)return {};const h=rows[0].map(x=>x.trim()
 
 const esc=s=>s.replace(/[&<>"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[m]));
 function show(d){
- const name=(d['이름']||'').trim();
+ const off=(d['작동']||'').trim().toUpperCase()==='OFF';
+ const name=off?'':(d['이름']||'').trim();
  const design=((d['디자인']||'').trim().toUpperCase()==='A')?'a':'b';
  document.body.className=design+(name?'':' noname')+(name.length>5?' long':'');
  document.querySelectorAll('.n').forEach(e=>e.textContent=name||'리스테이 연월');
